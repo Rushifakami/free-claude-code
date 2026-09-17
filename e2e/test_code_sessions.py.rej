@@ -1,51 +1,29 @@
 diff a/e2e/test_code_sessions.py b/e2e/test_code_sessions.py	(rejected hunks)
-@@ -14,6 +14,49 @@ from free_claude_code.runtime.codex_protocol import CodexProtocol
- from tests.code_sessions_support import CodexPackets
+@@ -6,6 +6,7 @@ import pytest
+ from playwright.sync_api import expect
  
- 
-+def test_model_picker_uses_application_order_and_keeps_configured_selection(
-+    page,
-+    admin_base_url,
-+    tmp_path,
-+    code_control,
-+    monkeypatch,
-+):
-+    from free_claude_code.application.model_metadata import ProviderModelInfo
-+    from free_claude_code.config.settings import Settings
-+    from free_claude_code.runtime.codex_app_server import CodexHarnessFactory
-+    from tests.runtime.test_codex_catalog import FakeRequestRuntime
-+
-+    refs = (
-+        "deepseek/other",
-+        "open_router/Apple",
-+        "open_router/apple",
-+        "open_router/Zulu",
-+    )
-+    code_control.harness.model = refs[-1]
-+    code_control.harness.configurations = dict.fromkeys(refs, "capabilities")
-+    runtime = FakeRequestRuntime(
-+        settings=Settings().model_copy(update={"model": refs[-1]}),
-+        cached_infos=tuple(ProviderModelInfo(ref) for ref in reversed(refs)),
-+    )
-+    factory = CodexHarnessFactory(runtime, binary="codex")
-+    monkeypatch.setattr(code_control.harness, "catalog", factory.catalog)
-+    create_session(page, admin_base_url, tmp_path)
-+    expect(page.locator("#codeProvider")).to_have_value("open_router")
-+    expect(page.locator("#codeModel")).to_have_value("Zulu")
-+    assert page.locator("#codeProvider option").evaluate_all(
-+        "options => options.map(option => option.value)"
-+    ) == ["deepseek", "open_router"]
-+    page.locator("#codeComposer").fill("Keep this draft")
-+    page.locator("#codeModel").fill("")
-+    expect(page.locator("#codeModel").locator("..").get_by_role("option")).to_have_text(
-+        ["Apple", "apple", "Zulu"]
-+    )
-+    page.locator("#codeModel").press("Escape")
-+    page.evaluate("window.CodeSessions.refresh()")
-+    expect(page.locator("#codeModel")).to_have_value("Zulu")
-+    expect(page.locator("#codeComposer")).to_have_value("Keep this draft")
-+
-+
- @pytest.mark.parametrize("width", [1440, 900, 390])
- def test_five_header_controls_fit_without_hiding_composer(
-     page, admin_base_url, tmp_path, code_control, width
+ from e2e.form_support import assert_autofill_opt_out
++from e2e.provider_support import open_provider
+ from free_claude_code.application.code_sessions.models import (
+     HarnessEvent,
+     PromptRequest,
+@@ -605,9 +606,9 @@ def test_settings_apply_preserves_open_creation_and_picker(
+     page.route("**/admin/api/config/apply", lambda route: pending.append(route))
+     page.goto(f"{admin_base_url}/admin")
+     expect(page.locator("#messageArea")).to_have_text("")
+-    page.locator("#field-NVIDIA_NIM_API_KEY").fill("new-key")
++    page.locator("#field-PORT").fill("8081")
+     page.get_by_role("button", name="Apply", exact=True).click()
+-    expect(page.locator("#messageArea")).to_have_text("Checking API keys…")
++    expect(page.locator("#messageArea")).to_have_text("Applying…")
+     assert len(pending) == 1
+     page.get_by_role("button", name="Code sessions", exact=True).click()
+     page.get_by_role("button", name="New code session", exact=True).click()
+@@ -1514,6 +1515,7 @@ def test_hidden_code_removal_preserves_providers_and_deleted_history(
+     page.get_by_role("button", name="Providers", exact=True).click()
+     providers_url = f"{admin_base_url}/admin"
+     expect(page).to_have_url(providers_url)
++    open_provider(page, "mistral")
+     field = page.locator("#field-MISTRAL_API_KEY")
+     field.fill("Keep this provider edit")
+     field.evaluate("input => input.setSelectionRange(2, 7)")

@@ -1,29 +1,10 @@
 diff a/pyproject.toml b/pyproject.toml	(rejected hunks)
-@@ -4,23 +4,23 @@ build-backend = "hatchling.build"
+@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
  
  [project]
  name = "free-claude-code"
--version = "6.2.32"
-+version = "6.2.33"
+-version = "6.2.33"
++version = "6.2.34"
  description = "Local proxy connecting coding agents to OpenAI-compatible AI providers"
  readme = "README.md"
  requires-python = ">=3.14.0"
- dependencies = [
--    "anyio>=4.12.1",
-+    "anyio>=4.15.1",
-     "fastapi[standard]>=0.141.1",
-     "uvicorn>=0.52.1",
-     "httpx[socks]>=0.28.1",
-     "httpx2[socks]>=2.7.0,<3",
-     "markdown-it-py>=4.2.0",
--    "pydantic>=2.13.4",
-+    "pydantic>=2.13.5",
-     "python-dotenv>=1.2.2",
-     "tiktoken>=0.13.0",
-     "python-telegram-bot>=22.8",
-     "discord.py>=2.7.1",
--    "openai>=3.2.0",
-+    "openai>=3.14.0",
-     "loguru>=0.7.0",
-     "aiohttp>=3.14.3",
-     "jsonschema>=4.25.0",
