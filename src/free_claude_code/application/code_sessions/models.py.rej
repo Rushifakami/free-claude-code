@@ -1,0 +1,10 @@
+diff a/src/free_claude_code/application/code_sessions/models.py b/src/free_claude_code/application/code_sessions/models.py	(rejected hunks)
+@@ -72,6 +72,8 @@ class CodeItem(Record):
+ 
+ 
+ class CodePrompt(Record):
++    """Form and response state for the prompt CodeItem with the same session/id."""
++
+     id: str
+     session_id: str
+     generation: str

@@ -1,50 +1,75 @@
 diff a/src/free_claude_code/api/admin_static/code_sessions.js b/src/free_claude_code/api/admin_static/code_sessions.js	(rejected hunks)
-@@ -716,7 +716,7 @@
-       record.session.reasoning_effort &&
-       !model.reasoning_efforts.includes(record.session.reasoning_effort)
-     )
--      return "Selected thinking effort is unavailable. Choose another effort or Model default.";
-+      return "Selected effort is unavailable. Choose another effort.";
-     return "";
+@@ -827,11 +827,7 @@
+         "secondary-button session-older",
+       );
+       older.id = "codeOlder";
+-      transcript.append(
+-        older,
+-        element("div", undefined, "code-items"),
+-        element("div", undefined, "code-prompts"),
+-      );
++      transcript.append(older, element("div", undefined, "code-items"));
+       const composer = UI.composer(
+         "code",
+         saved(id).draft || "",
+@@ -986,9 +982,6 @@
+         run.error ||
+         (run.status === "interrupted" ? "Turn stopped." : "This turn failed.");
+     }
+-    const prompts = root.querySelector(".code-prompts");
+-    for (const { value: prompt } of record?.prompts.values() || [])
+-      renderPrompt(prompts, prompt);
+     if (bottom) transcript.scrollTop = transcript.scrollHeight;
+     root.querySelector("#codeOlder").hidden = !record?.nextBefore;
+     renderControls();
+@@ -1069,6 +1062,11 @@
    }
  
-@@ -783,7 +783,7 @@
-         [],
-         "",
-         (value) => {
--          void updateSettings({ reasoning_effort: value || null });
-+          void updateSettings({ reasoning_effort: value });
-         },
+   function renderItem(parent, item) {
++    if (item.kind === "prompt") {
++      const prompt = records.get(selected).prompts.get(item.id)?.value;
++      if (prompt) renderPrompt(parent, prompt, item.sequence);
++      return;
++    }
+     let node = parent.querySelector(`[data-id="${CSS.escape(item.id)}"]`);
+     if (!node) {
+       node = UI.message(
+@@ -1095,11 +1093,7 @@
+         ),
+         element("pre", "", "code-item-detail"),
        );
-       controls.append(modelControl.group, reasoningControl.group);
-@@ -1035,21 +1035,15 @@
-       !catalogLoaded;
-     modelControl.update(record?.session?.model || "", disabled);
-     const model = catalog.find((model) => model.id === record?.session?.model),
--      effort = record?.session?.reasoning_effort;
--    const options = [
--      [
--        "",
--        model?.default_reasoning_effort
--          ? `Model default (${model.default_reasoning_effort})`
--          : "Model default",
--      ],
--      ...(model?.reasoning_efforts || []).map((value) => [value, value]),
--    ];
--    if (effort && !model?.reasoning_efforts.includes(effort))
--      options.push([effort, `${effort} (unavailable)`]);
--    reasoningControl.update(options, effort || "");
--    reasoningControl.select.disabled =
--      disabled || !model || (!model.reasoning_efforts.length && !effort);
-+      effort =
-+        record?.session?.reasoning_effort || model?.default_reasoning_effort || "off";
-+    const options = ["off", "low", "medium", "high", "xhigh", "max"].map(
-+      (value) => [value, value],
+-      node.dataset.sequence = item.sequence;
+-      const next = [...parent.children].find(
+-        (child) => Number(child.dataset.sequence) > item.sequence,
+-      );
+-      parent.insertBefore(node, next || null);
++      insertEntry(parent, node, item.sequence);
+     }
+     const content = node.querySelector(".code-prose"),
+       value = item.html ?? item.text;
+@@ -1113,7 +1107,15 @@
+     detail.hidden = !item.detail;
+   }
+ 
+-  function renderPrompt(parent, prompt) {
++  function insertEntry(parent, node, sequence) {
++    node.dataset.sequence = sequence;
++    const next = [...parent.children].find(
++      (child) => Number(child.dataset.sequence) > sequence,
 +    );
-+    reasoningControl.update(options, effort);
-+    for (const option of reasoningControl.select.options)
-+      option.disabled = !model?.reasoning_efforts.includes(option.value);
-+    reasoningControl.select.disabled = disabled || !model;
-     root.querySelector("#codeComposerStatus").textContent =
-       record?.session?.error ||
-       selectionError(record) ||
++    parent.insertBefore(node, next || null);
++  }
++
++  function renderPrompt(parent, prompt, sequence) {
+     let node = parent.querySelector(`[data-id="${CSS.escape(prompt.id)}"]`);
+     if (!node) {
+       node = element("form", undefined, "code-prompt");
+@@ -1124,7 +1126,7 @@
+       );
+       buildPrompt(node, prompt);
+       node.append(element("p", "", "code-prompt-state"));
+-      parent.append(node);
++      insertEntry(parent, node, sequence);
+     }
+     node.querySelector(".code-prompt-state").textContent =
+       prompt.error ||
