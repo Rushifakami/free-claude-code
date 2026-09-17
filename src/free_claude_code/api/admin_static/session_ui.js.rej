@@ -1,28 +1,22 @@
 diff a/src/free_claude_code/api/admin_static/session_ui.js b/src/free_claude_code/api/admin_static/session_ui.js	(rejected hunks)
-@@ -117,7 +117,7 @@
-       },
-     };
+@@ -144,10 +144,7 @@
+     textarea.value = draft;
+     textarea.placeholder = placeholder;
+     textarea.setAttribute("aria-label", "Message");
+-    const actions = node("div", "session-composer-actions"),
+-      status = node("span", "session-composer-status");
+-    status.id = `${id}ComposerStatus`;
+-    status.setAttribute("aria-live", "polite");
++    const actions = node("div", "session-composer-actions");
+     const send = button("Send", "primary-button", onSend),
+       stop = button("Stop", "danger-button", onStop);
+     send.id = `${id}Send`;
+@@ -163,7 +160,7 @@
+         if (!send.disabled && !send.hidden) onSend();
+       }
+     });
+-    actions.append(status, send, stop);
++    actions.append(send, stop);
+     element.append(textarea, actions);
+     return element;
    }
--  function reasoningControl(id, options, value, onChange) {
-+  function selectControl(id, title, options, value, onChange) {
-     const group = node("label", "session-control"),
-       select = node("select");
-     select.id = id;
-@@ -133,7 +133,7 @@
-     };
-     update(options, value);
-     select.addEventListener("change", () => onChange(select.value));
--    group.append(node("span", "", "Effort"), select);
-+    group.append(node("span", "", title), select);
-     return { group, select, update };
-   }
-   function composer(id, draft, placeholder, onInput, onSend, onStop) {
-@@ -195,7 +195,7 @@
-     shell,
-     header,
-     modelControl,
--    reasoningControl,
-+    selectControl,
-     composer,
-     message,
-     thinking,
