@@ -1,26 +1,18 @@
 diff a/e2e/test_admin_integrations.py b/e2e/test_admin_integrations.py	(rejected hunks)
-@@ -119,7 +137,8 @@ def test_connect_disconnect_and_modal_dismissal(page, admin_base_url, tmp_path):
-     action.click()
-     expect(dialog).not_to_be_visible()
-     expect(card_button).to_have_text("Disconnect")
--    expect(page.locator("#claudeIntegrationStatus")).to_have_text("Connected")
-+    expect(page.locator("#claudeIntegrationStatus")).not_to_be_visible()
-+    expect(card_button).to_have_css("color", "rgb(239, 68, 68)")
-     expect(page.locator("#claudeIntegrationMessage")).to_contain_text("Reload VS Code")
-     assert json.loads(path.read_text())["claudeCode.disableLoginPrompt"] is True
-     state_path = tmp_path / ".claude.json"
-@@ -128,12 +147,14 @@ def test_connect_disconnect_and_modal_dismissal(page, admin_base_url, tmp_path):
-     expect(card_button).to_have_text("Disconnect")
-     card_button.click()
-     expect(action).to_have_text("Disconnect")
-+    expect(action).to_have_css("color", "rgb(239, 68, 68)")
-     expect(page.locator("#claudeIntegrationDescription")).to_contain_text("Remove")
-     page.keyboard.press("Escape")
-     assert json.loads(path.read_text())["claudeCode.disableLoginPrompt"] is True
-     card_button.click()
+@@ -7,7 +7,7 @@ from playwright.sync_api import expect
+ from free_claude_code.cli import vscode
+ 
+ 
+-@pytest.mark.parametrize("width", [1280, 390])
++@pytest.mark.parametrize("width", [1280, 1200, 390])
+ def test_codex_connect_disconnect_and_modal_paths(
+     page, admin_base_url, tmp_path, width
+ ):
+@@ -155,6 +163,7 @@ def test_connect_disconnect_and_modal_dismissal(page, admin_base_url, tmp_path):
      action.click()
      expect(card_button).to_have_text("Connect")
-+    expect(card_button).to_have_css("color", "rgb(6, 16, 11)")
+     expect(card_button).to_have_css("color", "rgb(6, 16, 11)")
++    expect(page.locator("#claudeIntegrationStatus")).not_to_be_visible()
      assert json.loads(path.read_text()) == {}
      assert json.loads(state_path.read_text())["hasCompletedOnboarding"] is True
  
