@@ -263,9 +263,9 @@ def test_codex_connect_disconnect_and_modal_paths(
             "Claude Code in JetBrains ACP",
         ]
     )
-    expect(page.locator("#claudeIntegrationStatus")).not_to_be_visible()
+    expect(page.locator("#claudeIntegrationStatus")).to_have_count(0)
     expect(page.locator("#openCodexIntegration")).to_be_enabled()
-    expect(page.locator("#codexIntegrationStatus")).not_to_be_visible()
+    expect(page.locator("#codexIntegrationStatus")).to_have_count(0)
     expect(cards.nth(1)).to_contain_text(
         "Use FCC's models in the Codex VS Code extension and desktop app."
     )
@@ -314,7 +314,7 @@ def test_codex_connect_disconnect_and_modal_paths(
     page.locator("#confirmCodexIntegration").click()
     expect(dialog).not_to_be_visible()
     expect(opener).to_have_text("Disconnect")
-    expect(page.locator("#codexIntegrationStatus")).not_to_be_visible()
+    expect(page.locator("#codexIntegrationStatus")).to_have_count(0)
     expect(opener).to_have_css("color", "rgb(239, 68, 68)")
     if width >= 1200:
         buttons = [
@@ -341,7 +341,7 @@ def test_codex_connect_disconnect_and_modal_paths(
     page.locator("#confirmCodexIntegration").click()
     expect(opener).to_have_text("Connect")
     expect(opener).to_have_css("color", "rgb(6, 16, 11)")
-    expect(page.locator("#codexIntegrationStatus")).not_to_be_visible()
+    expect(page.locator("#codexIntegrationStatus")).to_have_count(0)
     assert tomllib.loads(path.read_text()) == {"model": "my-choice"}
     assert not (tmp_path / "vscode" / "settings.json").exists()
     assert not (tmp_path / ".claude.json").exists()
