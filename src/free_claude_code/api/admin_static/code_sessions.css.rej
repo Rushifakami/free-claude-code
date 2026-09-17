@@ -1,0 +1,16 @@
+diff a/src/free_claude_code/api/admin_static/code_sessions.css b/src/free_claude_code/api/admin_static/code_sessions.css	(rejected hunks)
+@@ -59,6 +59,14 @@
+ .code-field small {
+   color: var(--muted);
+ }
++.code-folder-row {
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) auto;
++  gap: 8px;
++}
++.code-folder-row input {
++  min-width: 0;
++}
+ .code-field input:not([type="checkbox"]):not([type="radio"]),
+ .code-field select,
+ .code-dialog input,
