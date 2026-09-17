@@ -247,7 +247,7 @@ def test_modal_shows_files_for_the_selected_action(
 
 
 @pytest.mark.parametrize("width", [1280, 390])
-def test_codex_preview_modal_is_noop_and_dismissible(
+def test_codex_connect_disconnect_and_modal_paths(
     page, admin_base_url, tmp_path, width
 ):
     page.set_viewport_size({"width": width, "height": 900})
@@ -259,8 +259,6 @@ def test_codex_preview_modal_is_noop_and_dismissible(
     expect(cards.nth(1)).to_contain_text(
         "Use FCC's models in the Codex CLI, VS Code extension, and desktop app."
     )
-    requests = []
-    page.on("request", lambda request: requests.append(request.url))
     opener = page.locator("#openCodexIntegration")
     dialog = page.get_by_role("dialog", name="Codex", exact=True)
     opener.click()
@@ -268,14 +266,13 @@ def test_codex_preview_modal_is_noop_and_dismissible(
     expect(page.locator("#claudeIntegrationDialog")).not_to_be_visible()
     expect(dialog.get_by_role("button", name="Close", exact=True)).to_be_focused()
     expect(dialog).to_contain_text(
-        "Will configure Codex to use FCC's models through its shared config.toml."
+        "Configure Codex to use FCC. Your selected model stays unchanged."
     )
     assert dialog.evaluate("element => element.scrollWidth <= element.clientWidth")
-    action = dialog.get_by_role("button", name="Connect", exact=True)
-    for _ in range(3):
-        action.click()
-        expect(action).to_be_enabled()
-        expect(dialog).to_be_visible()
+    path = tmp_path / ".codex" / "config.toml"
+    expect(dialog.locator("#codexIntegrationFiles li")).to_have_text(
+        [str(path.resolve())]
+    )
     page.locator("#codexIntegrationDescription").click()
     expect(dialog).to_be_visible()
     dialog.get_by_role("button", name="Close", exact=True).click()
@@ -287,7 +284,29 @@ def test_codex_preview_modal_is_noop_and_dismissible(
     opener.click()
     page.mouse.click(1, 1)
     expect(dialog).not_to_be_visible()
-    assert requests == []
+    assert not path.exists()
+    path.parent.mkdir()
+    path.write_text('model = "my-choice" # Keep this\n')
+    opener.click()
+    page.locator("#confirmCodexIntegration").click()
+    expect(dialog).not_to_be_visible()
+    expect(opener).to_have_text("Disconnect")
+    expect(page.locator("#codexIntegrationStatus")).to_have_text("Connected")
+    expect(page.locator("#codexIntegrationMessage")).to_have_text(
+        "Settings saved. Restart Codex and select an FCC model."
+    )
+    assert tomllib.loads(path.read_text())["model"] == "my-choice"
+    assert "# Keep this" in path.read_text()
+    page.reload()
+    expect(opener).to_have_text("Disconnect")
+    opener.click()
+    expect(page.locator("#confirmCodexIntegration")).to_have_text("Disconnect")
+    expect(dialog.locator("#codexIntegrationFiles li")).to_have_text(
+        [str(path.resolve())]
+    )
+    page.locator("#confirmCodexIntegration").click()
+    expect(opener).to_have_text("Connect")
+    assert tomllib.loads(path.read_text()) == {"model": "my-choice"}
     assert not (tmp_path / "vscode" / "settings.json").exists()
     assert not (tmp_path / ".claude.json").exists()
 
