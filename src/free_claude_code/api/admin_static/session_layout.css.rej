@@ -1,28 +1,15 @@
 diff a/src/free_claude_code/api/admin_static/session_layout.css b/src/free_claude_code/api/admin_static/session_layout.css	(rejected hunks)
-@@ -446,13 +446,25 @@
- }
- 
- .session-composer-actions {
-+  justify-content: flex-end;
-   gap: 12px;
+@@ -451,6 +451,13 @@
    margin-top: 4px;
  }
  
--.session-composer-status {
-+.code-activity {
++.code-context-usage {
++  color: var(--muted);
++  font-size: 12px;
++  font-variant-numeric: tabular-nums;
++  white-space: nowrap;
++}
++
+ .code-activity {
    color: var(--muted);
-+  font-size: 14px;
-+  padding: 12px 0;
-+}
-+
-+.code-control-error {
-+  color: var(--error);
-   font-size: 12px;
-+  overflow-wrap: anywhere;
-+}
-+
-+.code-selection-error {
-+  grid-column: 1 / -1;
- }
- 
- .session-older {
+   font-size: 14px;

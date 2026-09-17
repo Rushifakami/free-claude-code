@@ -1,33 +1,22 @@
 diff a/src/free_claude_code/application/code_sessions/service.py b/src/free_claude_code/application/code_sessions/service.py	(rejected hunks)
-@@ -1001,15 +1001,14 @@ class CodeService:
-                             )
-                             owner.prompts[prompt.id] = resolved
-                             self._publish_prompt(owner, resolved)
--                elif event.kind == "error" and matches:
--                    self._publish(
--                        owner,
--                        "run.notice",
--                        message=event.message or "Codex reported an error.",
--                        will_retry=event.will_retry,
--                    )
--                elif event.kind == "notice" and event.message and run is not None:
-+                elif run is not None and (
-+                    (event.kind == "error" and matches)
-+                    or (event.kind == "notice" and event.message)
-+                ):
-                     await self._flush_locked(owner)
-+                    message = event.message or "Codex reported an error."
-+                    if event.kind == "error" and event.will_retry:
-+                        message = f"Retrying… {message}"
-                     item = CodeItem(
-                         id=str(uuid.uuid4()),
-                         session_id=owner.session.id,
-@@ -1017,7 +1016,7 @@ class CodeService:
-                         run_id=run.id,
-                         kind="notice",
-                         title="Notice",
--                        text=event.message,
-+                        text=message,
-                         complete=True,
-                         raw=event.raw,
-                     )
+@@ -875,6 +875,20 @@ class CodeService:
+                     return
+                 if owner.session.status != "ready":
+                     return
++                if event.kind == "context_usage":
++                    if (
++                        event.context_used_tokens is None
++                        or event.context_used_tokens
++                        == owner.session.context_used_tokens
++                    ):
++                        return
++                    session = owner.session.model_copy(
++                        update={"context_used_tokens": event.context_used_tokens}
++                    )
++                    await self._persist(owner, session)
++                    owner.session = session
++                    self._publish(owner, "session.updated")
++                    return
+                 run = owner.run
+                 matches = (
+                     run is not None
