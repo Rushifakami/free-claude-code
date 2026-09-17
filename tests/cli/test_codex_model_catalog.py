@@ -229,7 +229,7 @@ def test_launcher_config_composes_with_persistent_codex_config(
     write_codex_model_catalog(
         catalog_path,
         build_codex_model_catalog(
-            client_models_from_response(_models_payload("nvidia_nim/test-model"))
+            catalog_models_from_response(_models_payload("nvidia_nim/test-model"))
         ),
     )
     codex_home = tmp_path / "codex-home"

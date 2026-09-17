@@ -1,20 +1,67 @@
 diff a/src/free_claude_code/runtime/codex_app_server.py b/src/free_claude_code/runtime/codex_app_server.py	(rejected hunks)
-@@ -656,14 +656,15 @@ class CodexHarnessFactory:
-             ),
-         )
+@@ -24,6 +24,7 @@ from free_claude_code.application.code_sessions.models import (
+     NativeThread,
+ )
+ from free_claude_code.application.code_sessions.ports import EventSink, HarnessSelection
++from free_claude_code.application.model_catalog import CatalogModel, read_model_catalog
+ from free_claude_code.application.ports import RequestRuntimePort
+ from free_claude_code.cli.process_registry import register_pid, unregister_pid
+ from free_claude_code.config.model_refs import split_provider_model_ref
+@@ -31,15 +32,16 @@ from free_claude_code.config.server_urls import local_proxy_root_url
+ from free_claude_code.core.json_types import JsonObject
+ from free_claude_code.core.version import package_version
+ from free_claude_code.harnesses.codex import CODEX_INSTALL_HINT, prepare_codex_launch
+-from free_claude_code.harnesses.codex_model_catalog import build_codex_model_catalog
+-from free_claude_code.harnesses.model_catalog import ClientModel
++from free_claude_code.harnesses.codex_model_catalog import (
++    CodexModel,
++    codex_model_entry,
++    project_codex_models,
++)
+ from free_claude_code.harnesses.resources import LaunchResources
  
--    def prepare(
-+    async def prepare(
-         self, model: str, reasoning_effort: str | None, mode: CodeMode
-     ) -> _CodexSelection:
-         binary = self._binary or shutil.which("codex")
-         if binary is None:
+-from .codex_catalog import current_codex_models
+ from .codex_protocol import (
+     CodexProtocol,
+     NativePrompt,
+-    array_value,
+     object_value,
+     string_value,
+ )
+@@ -578,7 +580,7 @@ class _CodexSelection:
+     binary_path: str
+     proxy_root_url: str
+     base_env: Mapping[str, str] = field(repr=False)
+-    models: tuple[ClientModel, ...]
++    models: tuple[CatalogModel, ...]
+     model: str
+     configuration_key: str
+     fingerprints: dict[str, str]
+@@ -664,12 +660,13 @@ class CodexHarnessFactory:
              raise CodeUnavailableError("Codex is not installed. " + CODEX_INSTALL_HINT)
--        settings = self._runtime.current_settings()
--        models = current_codex_models(self._runtime, settings)
-+        snapshot = await self._runtime.wait_for_catalog()
-+        settings = snapshot.settings
-+        models = current_codex_models(snapshot, settings)
+         snapshot = await self._runtime.wait_for_catalog()
+         settings = snapshot.settings
+-        models = current_codex_models(snapshot, settings)
++        models = read_model_catalog(snapshot, settings).models
++        projected = project_codex_models(models)
          selected = next(
              (
                  candidate
+-                for candidate in models
+-                if candidate.provider_model_ref == model
++                for candidate in projected
++                if candidate.model.provider_model_ref == model
+             ),
+             None,
+         )
+@@ -697,8 +684,8 @@ class CodexHarnessFactory:
+             )
+         effort = reasoning_effort or option.default_reasoning_effort
+         fingerprints = {
+-            model.provider_model_ref: _fingerprint(entries[model.wire_slug])
+-            for model in models
++            entry.model.provider_model_ref: _fingerprint(codex_model_entry(entry))
++            for entry in projected
+         }
+         return _CodexSelection(
+             binary_path=binary,

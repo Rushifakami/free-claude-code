@@ -49,7 +49,7 @@ class CodexModelCatalogPublisher:
         runtime: ModelCatalogPort,
         catalog_path: Path,
     ) -> None:
-        catalog = build_codex_model_catalog(current_codex_models(runtime))
+        catalog = build_codex_model_catalog(read_model_catalog(runtime).models)
         models = catalog.get("models")
         if not isinstance(models, list) or not models:
             raise ValueError("Codex model catalog contains no routable models.")

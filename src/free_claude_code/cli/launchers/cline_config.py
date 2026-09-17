@@ -24,8 +24,9 @@ class ClineConfig:
 
 
 def build_cline_config(
-    models: tuple[ClientModel, ...],
+    models: tuple[CatalogModel, ...],
     *,
+    default_model_id: str,
     proxy_root_url: str,
     auth_token: str,
     launch_id: str,
@@ -39,12 +40,11 @@ def build_cline_config(
     timestamp = (
         (now or datetime.now(UTC)).astimezone(UTC).isoformat().replace("+00:00", "Z")
     )
-    default_model = models[0].wire_slug
     provider_settings: JsonObject = {
         "provider": CLINE_PROVIDER_ID,
         "apiKey": auth_token,
         "headers": {"x-fcc-launch-id": launch_id},
-        "model": default_model,
+        "model": default_model_id,
         "protocol": "openai-responses",
         "baseUrl": proxy_v1_url(proxy_root_url),
         "capabilities": ["streaming", "tools"],
@@ -73,7 +73,7 @@ def build_cline_config(
                     "provider": {
                         "name": "Free Claude Code",
                         "baseUrl": proxy_v1_url(proxy_root_url),
-                        "defaultModelId": default_model,
+                        "defaultModelId": default_model_id,
                         "protocol": "openai-responses",
                         "client": "openai",
                         "capabilities": ["streaming", "tools"],
@@ -85,7 +85,7 @@ def build_cline_config(
     )
 
 
-def _model_entry(model: ClientModel) -> JsonObject:
+def _model_entry(model: CatalogModel) -> JsonObject:
     supports_reasoning = model.supports_reasoning is not False
     supports_vision = (
         model.input_modalities is not None

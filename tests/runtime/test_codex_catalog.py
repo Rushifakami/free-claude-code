@@ -63,6 +63,35 @@ def _catalog_slugs(path: Path) -> list[str]:
     return [model["slug"] for model in payload["models"]]
 
 
+@pytest.mark.asyncio
+async def test_known_vision_survives_publication_and_browser_preparation(
+    tmp_path: Path,
+):
+    runtime = FakeRequestRuntime(
+        settings=Settings().model_copy(update={"model": "nvidia_nim/configured"}),
+        cached_infos=(
+            ProviderModelInfo(
+                "open_router/vision",
+                input_modalities=frozenset(
+                    {ModelInputModality.TEXT, ModelInputModality.IMAGE}
+                ),
+                context_window_tokens=131072,
+            ),
+        ),
+    )
+    path = tmp_path / "catalog.json"
+    CodexModelCatalogPublisher(path).publish(runtime)
+    entries = {row["slug"]: row for row in json.loads(path.read_text())["models"]}
+    assert entries["open_router/vision"]["input_modalities"] == ["text", "image"]
+    selected = await CodexHarnessFactory(runtime, binary="codex").prepare(
+        "open_router/vision", None, "config"
+    )
+    prepared = json.loads(json.dumps(build_codex_model_catalog(selected.models)))
+    assert next(
+        row for row in prepared["models"] if row["slug"] == "open_router/vision"
+    )["input_modalities"] == ["text", "image"]
+
+
 def test_publisher_projects_the_application_catalog_without_compatibility_ids(
     tmp_path: Path,
 ) -> None:

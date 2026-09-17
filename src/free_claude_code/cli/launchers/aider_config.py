@@ -21,7 +21,7 @@ class AiderConfig:
 
 
 def build_aider_config(
-    models: tuple[ClientModel, ...],
+    models: tuple[CatalogModel, ...],
     *,
     messages_url: str,
     api_key_env: str,
@@ -39,7 +39,14 @@ def build_aider_config(
         by_name.setdefault(f"anthropic/{model.wire_slug}", model)
     settings: list[JsonObject] = []
     metadata: JsonObject = {}
-    for name, model in by_name.items():
+    for name, model in sorted(
+        by_name.items(),
+        key=lambda item: (
+            model_order_key(item[1].provider_model_ref),
+            item[0] != item[1].wire_slug,
+            item[0],
+        ),
+    ):
         entry: JsonObject = {
             "name": name,
             "weak_model_name": name,
@@ -60,7 +67,7 @@ def build_aider_config(
     return AiderConfig(settings=settings, metadata=metadata)
 
 
-def _model_metadata(model: ClientModel) -> JsonObject:
+def _model_metadata(model: CatalogModel) -> JsonObject:
     metadata: JsonObject = {
         "litellm_provider": "anthropic",
         "mode": "chat",

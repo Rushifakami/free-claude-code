@@ -27,8 +27,9 @@ _REASONING_EFFORTS: JsonObject = {
 
 
 def build_dsh_launch_config(
-    models: tuple[ClientModel, ...],
+    models: tuple[CatalogModel, ...],
     *,
+    default_model_id: str,
     proxy_root_url: str,
     settings_path: Path,
     credentials_path: Path,
@@ -40,7 +41,6 @@ def build_dsh_launch_config(
         raise ValueError("DeepSeek Harness requires at least one routable FCC model")
 
     stream_idle_timeout_ms = _stream_idle_timeout_ms(provider_progress_timeout)
-    selected_model = models[0].wire_slug
     provider: JsonObject = {
         "displayName": "Free Claude Code",
         "apiKeyEnv": DSH_API_KEY_ENV,
@@ -70,7 +70,7 @@ def build_dsh_launch_config(
         _configured_row(
             "agent-default-model",
             "@deepseek-ai/dsh-agent-default-model",
-            {"provider": DSH_PROVIDER_ID, "model": selected_model},
+            {"provider": DSH_PROVIDER_ID, "model": default_model_id},
         ),
         _disabled_row("llm-deepseek", "@deepseek-ai/dsh-llm-deepseek"),
         _disabled_row(
@@ -96,7 +96,7 @@ def _stream_idle_timeout_ms(provider_progress_timeout: float) -> int:
     return timeout_ms
 
 
-def _model_profile(model: ClientModel) -> JsonObject:
+def _model_profile(model: CatalogModel) -> JsonObject:
     profile: JsonObject = {
         "id": model.wire_slug,
         "name": model.display_name,

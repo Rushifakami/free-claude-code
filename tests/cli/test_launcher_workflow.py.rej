@@ -1,0 +1,12 @@
+diff a/tests/cli/test_launcher_workflow.py b/tests/cli/test_launcher_workflow.py	(rejected hunks)
+@@ -8,9 +8,9 @@ from urllib.error import URLError
+ 
+ import pytest
+ 
++from free_claude_code.application.model_catalog import CatalogModel
+ from free_claude_code.cli.launchers.aider_config import build_aider_config
+ from free_claude_code.config.paths import codex_model_catalog_path
+-from free_claude_code.harnesses.model_catalog import ClientModel
+ from tests.cli.conftest import LaunchCapture
+ 
+ HARNESSES = (

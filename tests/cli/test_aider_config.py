@@ -22,7 +22,7 @@ def _models() -> tuple[ClientModel, ...]:
             context_window_tokens=131072,
             max_output_tokens=8192,
         ),
-        ClientModel(
+        CatalogModel(
             wire_slug="ollama_cloud/qwen3-coder:480b",
             provider_model_ref="ollama_cloud/qwen3-coder:480b",
             display_name="Colon model",
@@ -30,7 +30,7 @@ def _models() -> tuple[ClientModel, ...]:
             input_modalities=frozenset({ModelInputModality.TEXT}),
             max_output_tokens=4096,
         ),
-        ClientModel(
+        CatalogModel(
             wire_slug="future_provider/unknown-model",
             provider_model_ref="future_provider/unknown-model",
             display_name="Unknown model",
@@ -114,8 +114,8 @@ def test_aider_config_rejects_empty_catalog() -> None:
 
 def test_aider_catalog_ids_take_precedence_over_generated_transport_spellings() -> None:
     models = (
-        ClientModel("provider/model", "provider/model", "First", None),
-        ClientModel(
+        CatalogModel("provider/model", "provider/model", "First", None),
+        CatalogModel(
             "anthropic/provider/model", "anthropic/provider/model", "Second", None
         ),
     )

@@ -1,0 +1,22 @@
+diff a/tests/cli/test_cline_launcher.py b/tests/cli/test_cline_launcher.py	(rejected hunks)
+@@ -6,18 +6,18 @@ from pathlib import Path
+ 
+ import pytest
+ 
++from free_claude_code.application.model_catalog import CatalogModel
+ from free_claude_code.cli.launchers.cline_config import (
+     CLINE_PROVIDER_ID,
+     build_cline_config,
+ )
+ from free_claude_code.core.model_capabilities import ModelInputModality
+-from free_claude_code.harnesses.model_catalog import ClientModel
+ 
+ 
+ def test_cline_config_uses_responses_and_only_known_metadata() -> None:
+     config = build_cline_config(
+         (
+-            ClientModel(
++            CatalogModel(
+                 wire_slug="nvidia_nim/vendor/model",
+                 provider_model_ref="nvidia_nim/vendor/model",
+                 display_name="Nested model",

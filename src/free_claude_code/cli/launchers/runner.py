@@ -133,18 +133,14 @@ def launch_harness(spec: HarnessSpec, argv: Sequence[str] | None = None) -> None
                 f"Free Claude Code proxy is not reachable at {proxy_root_url}: {error}\n"
                 "Start it in another terminal with: fcc-server"
             )
-        models: tuple[ClientModel, ...] = ()
+        catalog = None
         if spec.catalog_view is not None:
             stage = "prepare model catalog"
-            models = client_models_from_response(
-                fetch_proxy_models_response(
-                    proxy_root_url, auth_token, view=spec.catalog_view
-                )
+            catalog = fetch_proxy_model_catalog(
+                proxy_root_url, auth_token, view=spec.catalog_view
             )
-            if not models:
-                raise ValueError("model catalog contains no routable models")
         context = LaunchContext(
-            binary_path, settings, proxy_root_url, auth_token, base_env, models
+            binary_path, settings, proxy_root_url, auth_token, base_env, catalog
         )
         with ExitStack() as stack:
             stage = "prepare configuration"

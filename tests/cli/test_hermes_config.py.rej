@@ -1,0 +1,21 @@
+diff a/tests/cli/test_hermes_config.py b/tests/cli/test_hermes_config.py	(rejected hunks)
+@@ -4,16 +4,16 @@ import json
+ 
+ import pytest
+ 
++from free_claude_code.application.model_catalog import CatalogModel
+ from free_claude_code.cli.launchers.hermes_config import (
+     build_hermes_managed_config,
+ )
+ from free_claude_code.core.model_capabilities import ModelInputModality
+-from free_claude_code.harnesses.model_catalog import ClientModel
+ 
+ 
+-def _models() -> tuple[ClientModel, ...]:
++def _models() -> tuple[CatalogModel, ...]:
+     return (
+-        ClientModel(
++        CatalogModel(
+             wire_slug="nvidia_nim/vendor/model",
+             provider_model_ref="nvidia_nim/vendor/model",
+             display_name="Nested model",
