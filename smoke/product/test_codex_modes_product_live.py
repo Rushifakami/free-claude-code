@@ -576,6 +576,178 @@ def test_codex_child_review_local_e2e(
             )
 
 
+async def _exercise_child_review(
+    base_url: str,
+    workspace: Path,
+    release: threading.Event,
+    finished: threading.Event,
+    timeout_s: float,
+) -> str:
+    workspace.mkdir()
+    async with httpx.AsyncClient(base_url=base_url, timeout=timeout_s) as client:
+        bootstrap = (await client.get("/admin/api/code/bootstrap")).json()
+        assert bootstrap["available"], bootstrap
+        session_id = str(uuid.uuid4())
+        path = f"/admin/api/code/sessions/{session_id}"
+        created = await client.post(
+            "/admin/api/code/sessions",
+            json={"session_id": session_id, "cwd": str(workspace)},
+        )
+        created.raise_for_status()
+        changed = await client.patch(
+            path,
+            json={
+                "expected_revision": created.json()["revision"],
+                "mode": "auto_review",
+            },
+        )
+        changed.raise_for_status()
+        session = changed.json()
+        queue = asyncio.Queue()
+
+        async def send(text: str) -> str:
+            response = await client.post(
+                path + "/turns",
+                json={
+                    "operation_id": str(uuid.uuid4()),
+                    "expected_revision": session["revision"],
+                    "expected_epoch": bootstrap["epoch"],
+                    "text": text,
+                },
+            )
+            response.raise_for_status()
+            return response.json()["id"]
+
+        async def event() -> dict[str, Any]:
+            while True:
+                value = await queue.get()
+                if value.get("session_id") == session_id:
+                    assert value.get("prompt", {}).get("status") != "pending", value
+                    run = value.get("run") or {}
+                    assert run.get("status") not in {"failed", "interrupted"}, value
+                    return value
+
+        async with client.stream(
+            "GET", "/admin/api/code/events", timeout=None
+        ) as response:
+            response.raise_for_status()
+            reading = asyncio.create_task(_events(response, queue))
+            try:
+                async with asyncio.timeout(timeout_s):
+                    await queue.get()
+                    first = await send(
+                        "FCC_PARENT_REVIEW_WORK: Delegate a harmless local command to one child agent."
+                    )
+                    review = None
+                    parent_done = False
+                    while review is None or not parent_done:
+                        value = await event()
+                        item = value.get("item", {})
+                        if item.get("kind") == "subagent_auto_review":
+                            review = item
+                        parent_done |= (
+                            value.get("run", {}).get("id") == first
+                            and value["run"]["status"] == "completed"
+                        )
+                    detail = (await client.get(path)).json()
+                    assert (
+                        not review["complete"]
+                        and review["id"] in detail["active_review_ids"]
+                    ), detail
+                    session = detail["session"]
+                    second = await send("Reply while the child review is pending.")
+                    while True:
+                        value = await event()
+                        if (
+                            value.get("run", {}).get("id") == second
+                            and value["run"]["status"] == "completed"
+                        ):
+                            break
+                    release.set()
+                    while True:
+                        value = await event()
+                        item = value.get("item", {})
+                        if item.get("id") == review["id"] and item["complete"]:
+                            assert item["title"] == "Sub-agent Auto-review: Approved", (
+                                item
+                            )
+                            assert (
+                                item["run_id"] == first
+                                and item["sequence"] == review["sequence"]
+                            ), item
+                            assert (
+                                value["run"]["id"] == second
+                                and value["run"]["status"] == "completed"
+                            ), value
+                            break
+                    assert await asyncio.to_thread(finished.wait, timeout_s), (
+                        "Child did not finish its command"
+                    )
+                    detail = (await client.get(path)).json()
+                    assert detail["active_review_ids"] == [], detail
+                    print(
+                        "child Auto-review: parent finished; next message completed; original review approved"
+                    )
+            finally:
+                release.set()
+                reading.cancel()
+                await asyncio.gather(reading, return_exceptions=True)
+        return session_id
+
+
+def test_codex_child_review_local_e2e(
+    smoke_config: SmokeConfig, tmp_path: Path
+) -> None:
+    env, unset = _environment(tmp_path, "lmstudio/codex-mode-smoke")
+    with (tmp_path / "codex-home" / "config.toml").open(
+        "a", encoding="utf-8"
+    ) as config:
+        config.write("[features]\nmulti_agent = true\nmulti_agent_v2 = true\n")
+    release, finished = threading.Event(), threading.Event()
+    marker = tmp_path / "child-marker.txt"
+    with _canned_provider(release, finished) as (url, state):
+        env["LM_STUDIO_BASE_URL"] = url
+        state.update(spawn=True, mode="auto_review", command=_marker_command(marker))
+        try:
+            with SmokeServerDriver(
+                smoke_config,
+                name="codex-child-review-local",
+                env_overrides=env,
+                env_unset=unset,
+            ).run() as server:
+                session_id = asyncio.run(
+                    _exercise_child_review(
+                        server.base_url,
+                        tmp_path / "workspace",
+                        release,
+                        finished,
+                        smoke_config.timeout_s,
+                    )
+                )
+                assert marker.read_text().strip() == "smoke"
+                with closing(
+                    sqlite3.connect(tmp_path / "home" / ".fcc" / "code" / "code.db")
+                ) as database:
+                    root = database.execute(
+                        "SELECT native_thread_id FROM code_sessions WHERE id = ?",
+                        (session_id,),
+                    ).fetchone()[0]
+                    rows = database.execute(
+                        "SELECT raw FROM code_items WHERE session_id = ? AND kind = 'subagent_auto_review'",
+                        (session_id,),
+                    ).fetchall()
+                    assert rows and all(
+                        json.loads(row[0])["threadId"] != root for row in rows
+                    )
+            assert "error" not in state, state.get("error")
+            assert state["reviews"] == 1
+        finally:
+            release.set()
+            (tmp_path / "child-requests.json").write_text(
+                json.dumps(state, indent=2), encoding="utf-8"
+            )
+
+
 def test_codex_modes_free_provider_e2e(
     smoke_config: SmokeConfig, tmp_path: Path
 ) -> None:

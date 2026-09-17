@@ -1,0 +1,153 @@
+diff a/smoke/product/test_codex_modes_product_live.py b/smoke/product/test_codex_modes_product_live.py	(rejected hunks)
+@@ -5,11 +5,12 @@ import json
+ import os
+ import shlex
+ import shutil
++import sqlite3
+ import sys
+ import threading
+ import uuid
+ from collections.abc import Iterator
+-from contextlib import contextmanager
++from contextlib import closing, contextmanager
+ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+ from pathlib import Path
+ from typing import Any
+@@ -77,8 +78,32 @@ def _environment(tmp_path: Path, model: str) -> tuple[dict[str, str], set[str]]:
+     return env, unset
+ 
+ 
++def _tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
++    return {
++        "tool_calls": [
++            {
++                "index": 0,
++                "id": "call_" + uuid.uuid4().hex,
++                "type": "function",
++                "function": {"name": name, "arguments": json.dumps(arguments)},
++            }
++        ]
++    }
++
++
++def _marker_command(marker: Path) -> str:
++    return (
++        f"Set-Content -LiteralPath '{str(marker).replace(chr(39), chr(39) * 2)}' -Value smoke"
++        if os.name == "nt"
++        else f"printf smoke > {shlex.quote(str(marker))}"
++    )
++
++
+ @contextmanager
+-def _canned_provider() -> Iterator[tuple[str, dict[str, Any]]]:
++def _canned_provider(
++    review_release: threading.Event | None = None,
++    child_finished: threading.Event | None = None,
++) -> Iterator[tuple[str, dict[str, Any]]]:
+     state: dict[str, Any] = {"requests": [], "command": None, "reviews": 0}
+ 
+     class Handler(BaseHTTPRequestHandler):
+@@ -106,8 +131,19 @@ def _canned_provider() -> Iterator[tuple[str, dict[str, Any]]]:
+                     .get("json_schema", {})
+                     .get("schema", {})
+                 )
++                # The child starts without the parent's history. Route the canned
++                # actor by that boundary, independently of task-message encoding.
++                child_request = child_finished is not None and not any(
++                    "FCC_PARENT_REVIEW_WORK" in json.dumps(message.get("content", ""))
++                    for message in request["messages"]
++                    if message["role"] == "user"
++                )
+                 if "outcome" in schema.get("properties", {}):
+                     state["reviews"] += 1
++                    if review_release is not None:
++                        assert review_release.wait(30), (
++                            "Local child reviewer was not released"
++                        )
+                     delta = {
+                         "content": json.dumps(
+                             {
+@@ -119,7 +155,35 @@ def _canned_provider() -> Iterator[tuple[str, dict[str, Any]]]:
+                         )
+                     }
+                     reason = "stop"
+-                elif state["command"]:
++                elif state.get("spawn"):
++                    functions = {
++                        tool["function"]["name"]: tool["function"]
++                        for tool in request["tools"]
++                        if tool["type"] == "function"
++                    }
++                    spawn_name = next(
++                        (
++                            name
++                            for name in functions
++                            if name.rsplit("__", 1)[-1] == "spawn_agent"
++                        ),
++                        None,
++                    )
++                    assert spawn_name is not None, list(functions)
++                    properties = functions[spawn_name]["parameters"]["properties"]
++                    arguments = {
++                        "message": "FCC_CHILD_REVIEW_WORK: Execute the disposable local smoke command, then finish."
++                    }
++                    if "task_name" in properties:
++                        arguments["task_name"] = "smoke_child"
++                    if "fork_turns" in properties:
++                        arguments["fork_turns"] = "none"
++                    elif "fork_context" in properties:
++                        arguments["fork_context"] = False
++                    state["spawn"] = False
++                    delta = _tool_call(spawn_name, arguments)
++                    reason = "tool_calls"
++                elif state["command"] and (child_finished is None or child_request):
+                     names = [
+                         tool["function"]["name"]
+                         for tool in request["tools"]
+@@ -136,21 +200,11 @@ def _canned_provider() -> Iterator[tuple[str, dict[str, Any]]]:
+                             justification="Create the disposable smoke marker",
+                         )
+                     state["command"] = None
+-                    delta = {
+-                        "tool_calls": [
+-                            {
+-                                "index": 0,
+-                                "id": "call_" + uuid.uuid4().hex,
+-                                "type": "function",
+-                                "function": {
+-                                    "name": "exec_command",
+-                                    "arguments": json.dumps(arguments),
+-                                },
+-                            }
+-                        ]
+-                    }
++                    delta = _tool_call("exec_command", arguments)
+                     reason = "tool_calls"
+                 else:
++                    if child_request and child_finished is not None:
++                        child_finished.set()
+                     delta = {"content": "FCC_MODE_SMOKE_DONE"}
+                     reason = "stop"
+                 self.send_response(200)
+@@ -172,7 +226,7 @@ def _canned_provider() -> Iterator[tuple[str, dict[str, Any]]]:
+                 self.wfile.flush()
+             except Exception as exc:
+                 state["error"] = repr(exc)
+-                self.send_error(500, "Local smoke fixture failed")
++                self.send_error(400, "Local smoke fixture failed")
+ 
+     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+     server.daemon_threads = True
+@@ -231,11 +285,7 @@ async def _exercise(
+                     changed.raise_for_status()
+                     session = changed.json()
+                     marker = workspace.parent / f"marker-{uuid.uuid4().hex}.txt"
+-                    command = (
+-                        f"Set-Content -LiteralPath '{str(marker).replace(chr(39), chr(39) * 2)}' -Value smoke"
+-                        if os.name == "nt"
+-                        else f"printf smoke > {shlex.quote(str(marker))}"
+-                    )
++                    command = _marker_command(marker)
+                     if state is not None:
+                         state["command"] = command
+                         state["mode"] = mode
