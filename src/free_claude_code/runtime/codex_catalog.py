@@ -20,7 +20,7 @@ from free_claude_code.config.settings import Settings
 
 
 def current_codex_models(
-    runtime: RequestRuntimePort, settings: Settings | None = None
+    runtime: ModelCatalogPort, settings: Settings | None = None
 ) -> tuple[ClientModel, ...]:
     """Read the current FCC inventory without a request to the server itself."""
     response = build_models_list_response(
@@ -39,22 +39,14 @@ class CodexModelCatalogPublisher:
     def __init__(self, catalog_path: Path | None = None) -> None:
         self._catalog_path = catalog_path
 
-    def ensure_exists(self, runtime: RequestRuntimePort) -> None:
-        """Publish a startup catalog only when no prior catalog exists."""
-
-        catalog_path = self._resolved_catalog_path()
-        if catalog_path.exists():
-            return
-        self._publish(runtime, catalog_path)
-
-    def publish(self, runtime: RequestRuntimePort) -> None:
+    def publish(self, runtime: ModelCatalogPort) -> None:
         """Publish the complete current application model inventory."""
 
         self._publish(runtime, self._resolved_catalog_path())
 
     def _publish(
         self,
-        runtime: RequestRuntimePort,
+        runtime: ModelCatalogPort,
         catalog_path: Path,
     ) -> None:
         catalog = build_codex_model_catalog(current_codex_models(runtime))

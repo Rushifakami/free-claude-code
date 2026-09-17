@@ -1,0 +1,10 @@
+diff a/src/free_claude_code/runtime/codex_catalog.py b/src/free_claude_code/runtime/codex_catalog.py	(rejected hunks)
+@@ -9,7 +9,7 @@ from free_claude_code.api.model_catalog import (
+     ModelCatalogView,
+     build_models_list_response,
+ )
+-from free_claude_code.application.ports import RequestRuntimePort
++from free_claude_code.application.ports import ModelCatalogPort
+ from free_claude_code.config.paths import codex_model_catalog_path
+ from free_claude_code.config.settings import Settings
+ from free_claude_code.core.json_types import JsonValue

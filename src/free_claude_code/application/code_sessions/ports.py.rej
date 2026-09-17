@@ -1,9 +1,19 @@
 diff a/src/free_claude_code/application/code_sessions/ports.py b/src/free_claude_code/application/code_sessions/ports.py	(rejected hunks)
-@@ -20,6 +20,7 @@ from .models import (
-     NativeThread,
- )
+@@ -78,7 +78,7 @@ class HarnessFactory(Protocol):
  
-+# Harness connections must await each call and preserve native wire order.
- type EventSink = Callable[[HarnessEvent], Awaitable[None]]
+     def catalog(self) -> CodeCatalog: ...
  
+-    def prepare(
++    async def prepare(
+         self, model: str, reasoning_effort: str | None, mode: CodeMode
+     ) -> HarnessSelection: ...
  
+@@ -150,6 +150,8 @@ class CodeApplicationPort(Protocol):
+     @property
+     def cursor(self) -> int: ...
+ 
++    def storage_status(self) -> JsonObject: ...
++
+     def availability(self) -> tuple[bool, str | None]: ...
+ 
+     def catalog(self) -> CodeCatalog: ...

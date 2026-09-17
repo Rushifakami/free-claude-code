@@ -1,25 +1,18 @@
 diff a/src/free_claude_code/api/code_sessions_routes.py b/src/free_claude_code/api/code_sessions_routes.py	(rejected hunks)
-@@ -174,9 +174,13 @@ async def create(
- 
- @router.get("/admin/api/code/sessions/{session_id}")
- async def detail(
--    session_id: str, services: ApiServices = Depends(get_services)
-+    session_id: str,
-+    include_item_ids: tuple[str, ...] = Query(default=()),
-+    services: ApiServices = Depends(get_services),
- ) -> JsonObject:
--    return _detail_payload(await _code(services).get_detail(session_id))
-+    return _detail_payload(
-+        await _code(services).get_detail(session_id, include_item_ids=include_item_ids)
-+    )
+@@ -85,13 +85,15 @@ def code_page(request: Request, session_id: str | None = None):
  
  
- @router.get("/admin/api/code/sessions/{session_id}/items")
-@@ -303,6 +307,7 @@ def _detail_payload(detail: CodeDetail) -> JsonObject:
-         "run": _run_payload(detail.run) if detail.run else None,
-         "runs": [_run_payload(run) for run in detail.runs],
-         "active_prompt_ids": list(detail.active_prompt_ids),
-+        "active_review_ids": list(detail.active_review_ids),
-         "items": [_item_payload(item) for item in detail.items],
-         "prompts": [_prompt_payload(prompt) for prompt in detail.prompts],
-         "epoch": detail.epoch,
+ @router.get("/admin/api/code/bootstrap")
+-def bootstrap(services: ApiServices = Depends(get_services)) -> JsonObject:
++async def bootstrap(services: ApiServices = Depends(get_services)) -> JsonObject:
+     code = _code(services)
+     available, message = code.availability()
+     catalog = code.catalog()
+     return {
+         "available": available,
+         "message": message,
++        "storage": code.storage_status(),
++        "startup": services.requests.catalog_status(),
+         "harnesses": [{"id": "codex", "name": "Codex"}],
+         "epoch": code.epoch,
+         "models": [model.model_dump(mode="json") for model in catalog.models],

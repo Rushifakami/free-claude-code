@@ -7,6 +7,7 @@ import pytest
 from free_claude_code.application.code_sessions.models import CodeValidationError
 from free_claude_code.application.model_metadata import ProviderModelInfo
 from free_claude_code.application.ports import (
+    ModelCatalogSnapshot,
     RequestRuntimeLease,
     RequestRuntimePort,
 )
@@ -30,6 +31,9 @@ class FakeRequestRuntime(RequestRuntimePort):
     ) -> RequestRuntimeLease:
         del include_model_infos
         raise AssertionError("Catalog publication must not acquire a provider lease.")
+
+    async def wait_for_catalog(self) -> ModelCatalogSnapshot:
+        return ModelCatalogSnapshot(self._settings, self._cached_infos)
 
     def current_settings(self) -> Settings:
         return self._settings
@@ -73,24 +77,6 @@ def test_publisher_projects_the_application_catalog_without_compatibility_ids(
     ]
 
 
-def test_startup_publication_creates_missing_catalog_and_preserves_existing(
-    tmp_path: Path,
-) -> None:
-    catalog_path = tmp_path / "codex-model-catalog.json"
-    publisher = CodexModelCatalogPublisher(catalog_path)
-
-    publisher.ensure_exists(_runtime())
-    assert _catalog_slugs(catalog_path) == [
-        "nvidia_nim/configured",
-        "open_router/discovered",
-    ]
-
-    catalog_path.write_text("complete prior catalog\n", encoding="utf-8")
-    publisher.ensure_exists(_runtime())
-
-    assert catalog_path.read_text(encoding="utf-8") == "complete prior catalog\n"
-
-
 def test_empty_projection_preserves_existing_catalog(tmp_path: Path) -> None:
     catalog_path = tmp_path / "codex-model-catalog.json"
     catalog_path.write_text("last known good\n", encoding="utf-8")
@@ -108,7 +94,8 @@ def test_empty_projection_preserves_existing_catalog(tmp_path: Path) -> None:
     assert catalog_path.read_text(encoding="utf-8") == "last known good\n"
 
 
-def test_code_picker_and_native_selection_use_the_same_advertised_efforts():
+@pytest.mark.asyncio
+async def test_code_picker_and_native_selection_use_the_same_advertised_efforts():
     factory = CodexHarnessFactory(_runtime(), binary="codex")
     advertised = factory.catalog()
     assert advertised.default_model == "nvidia_nim/configured"

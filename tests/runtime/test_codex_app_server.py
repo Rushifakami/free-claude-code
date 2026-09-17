@@ -24,8 +24,8 @@ async def test_child_warning_during_shutdown_allows_connection_replacement(
     releases = []
     warning = asyncio.Event()
 
-    def selection_for(model, effort, mode):
-        selection = prepare(model, effort, mode)
+    async def selection_for(model, effort, mode):
+        selection = await prepare(model, effort, mode)
 
         async def open_native(cwd, sink):
             release = tmp_path / f"release-{len(connections)}"
@@ -162,7 +162,7 @@ async def test_complete_mode_overrides_restore_native_defaults(
         },
     }
     for mode in ("ask", "auto_review", "full_access", "config"):
-        selection = harness.prepare(harness.model, "high", mode)
+        selection = await harness.prepare(harness.model, "high", mode)
         await native.start_turn("hello", selection, "input", thread.permission_defaults)
         params = rpc.call_args.args[1]
         assert {
@@ -242,7 +242,7 @@ async def test_jsonl_sink_preserves_usage_before_turn_completion(tmp_path):
         await native.create_thread()
         turn_id = await native.start_turn(
             "hello",
-            FakeHarness().prepare("provider/model", None, "config"),
+            (await FakeHarness().prepare("provider/model", None, "config")),
             "input-1",
             FakeHarness().permission_defaults,
         )
@@ -267,7 +267,7 @@ async def test_jsonl_large_unicode_events_can_precede_rpc_ack(tmp_path):
         assert (
             await native.start_turn(
                 "hello",
-                FakeHarness().prepare("provider/model", None, "config"),
+                (await FakeHarness().prepare("provider/model", None, "config")),
                 "input-1",
                 FakeHarness().permission_defaults,
             )
@@ -290,8 +290,8 @@ async def test_terminal_storage_failure_drains_the_native_dispatcher(
     prepare = harness.prepare
     connections = []
 
-    def select(model, effort, mode):
-        selection = prepare(model, effort, mode)
+    async def select(model, effort, mode):
+        selection = await prepare(model, effort, mode)
 
         async def open_native(cwd, sink):
             native = CodexAppServer(
@@ -357,7 +357,7 @@ async def test_server_rpc_during_start_preserves_numeric_zero_id(tmp_path):
         await native.create_thread()
         await native.start_turn(
             "hello",
-            FakeHarness().prepare("provider/model", None, "config"),
+            (await FakeHarness().prepare("provider/model", None, "config")),
             "input-1",
             FakeHarness().permission_defaults,
         )
@@ -442,7 +442,7 @@ async def test_spawned_agent_prompt_is_visible_in_its_registered_root_session(tm
         await native.create_thread()
         await native.start_turn(
             "delegate",
-            FakeHarness().prepare("provider/model", None, "config"),
+            (await FakeHarness().prepare("provider/model", None, "config")),
             "input-1",
             FakeHarness().permission_defaults,
         )
@@ -486,7 +486,7 @@ async def test_turn_start_resets_sticky_effort_and_preserves_client_identity(
     for effort in (None, "high", "off", "max", None):
         await native.start_turn(
             "hello",
-            harness.prepare("provider/model", effort, "config"),
+            (await harness.prepare("provider/model", effort, "config")),
             "operation",
             harness.permission_defaults,
         )
