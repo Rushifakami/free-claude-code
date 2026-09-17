@@ -1,0 +1,9 @@
+diff a/tests/contracts/test_smoke_config.py b/tests/contracts/test_smoke_config.py	(rejected hunks)
+@@ -69,6 +69,7 @@ def _settings(**overrides):
+         "poolside_api_key": "",
+         "llm7_api_key": "",
+         "lightning_api_key": "",
++        "experiential_api_key": "",
+         "fireworks_api_key": "",
+         "novita_api_key": "",
+         "cloudflare_api_token": "",

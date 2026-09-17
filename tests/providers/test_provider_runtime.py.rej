@@ -1,0 +1,26 @@
+diff a/tests/providers/test_provider_runtime.py b/tests/providers/test_provider_runtime.py	(rejected hunks)
+@@ -116,6 +117,8 @@ def _make_settings(**overrides):
+     mock.llm7_api_key = "test_llm7_key"
+     mock.lightning_api_key = "test_lightning_key"
+     mock.lightning_base_url = LIGHTNING_DEFAULT_BASE
++    mock.experiential_api_key = "test_experiential_key"
++    mock.experiential_base_url = EXPERIENTIAL_DEFAULT_BASE
+     mock.nvidia_nim_proxy = None
+     mock.open_router_proxy = None
+     mock.lmstudio_proxy = None
+@@ -163,6 +166,7 @@ def _make_settings(**overrides):
+     mock.poolside_proxy = None
+     mock.llm7_proxy = None
+     mock.lightning_proxy = None
++    mock.experiential_proxy = None
+     mock.kilo_api_key = "test_kilo_key"
+     mock.kilo_proxy = None
+     mock.openai_proxy = None
+@@ -932,6 +965,7 @@ async def test_create_provider_instantiates_each_builtin():
+         "poolside": OpenAIChatProvider,
+         "llm7": OpenAIChatProvider,
+         "lightning": OpenAIChatProvider,
++        "experiential": OpenAIChatProvider,
+         "opencode_go": OpenCodeProvider,
+         "vercel": OpenAIChatProvider,
+         "bedrock": OpenAIChatProvider,
