@@ -1,73 +1,40 @@
 diff a/src/free_claude_code/api/admin_static/session_layout.css b/src/free_claude_code/api/admin_static/session_layout.css	(rejected hunks)
-@@ -164,17 +164,11 @@
-   white-space: nowrap;
- }
- 
--.session-card span,
--.session-muted {
-+.session-card span {
-   color: var(--muted);
-   font-size: 12px;
- }
- 
--.session-card .session-status {
--  color: var(--accent);
--  font-weight: 700;
--}
--
- .session-load-more {
-   margin-top: 18px;
- }
-@@ -274,10 +268,6 @@
+@@ -268,6 +268,38 @@
    height: 38px;
  }
  
--.session-controls > button {
--  align-self: end;
--}
--
++.session-controls.code-session-controls {
++  display: grid;
++  grid-template-columns: minmax(110px, 1fr) minmax(180px, 2fr) minmax(
++      80px,
++      0.65fr
++    ) minmax(84px, 0.65fr) minmax(124px, 1fr);
++}
++.code-session-controls .session-control,
++.code-session-controls select {
++  min-width: 0;
++}
++.code-session-controls .session-model-control {
++  max-width: none;
++  grid-column: auto;
++}
++@media (max-width: 1100px) {
++  .session-controls.code-session-controls {
++    grid-template-columns: repeat(3, minmax(0, 1fr));
++  }
++  .code-session-controls .session-model-control {
++    grid-column: span 2;
++  }
++}
++@media (max-width: 700px) {
++  .session-controls.code-session-controls {
++    grid-template-columns: repeat(2, minmax(0, 1fr));
++  }
++  .code-session-controls .session-model-control {
++    grid-column: auto;
++  }
++}
++
  .session-notice {
    grid-area: notice;
    margin-top: 12px;
-@@ -289,12 +279,6 @@
-   font-size: 13px;
- }
- 
--.session-notice.error {
--  border-color: var(--error-border);
--  background: var(--error-bg);
--  color: var(--error);
--}
--
- .session-transcript {
-   grid-area: transcript;
-   min-height: 0;
-@@ -399,12 +383,6 @@
-   color: var(--error);
- }
- 
--.session-message-actions {
--  display: flex;
--  gap: 8px;
--  margin-top: 12px;
--}
--
- .session-composer {
-   grid-area: composer;
-   margin: 8px 0 0;
-@@ -459,15 +437,6 @@
-   text-align: center;
- }
- 
--.session-empty h3,
--.session-empty p {
--  margin: 0;
--}
--
--.session-transcript-empty {
--  min-height: 100%;
--}
--
- .danger-button {
-   min-height: 38px;
-   border: 1px solid var(--error-border);
